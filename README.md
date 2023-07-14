@@ -1,0 +1,2 @@
+# Sucktorial
+Because Factorial sucks.
