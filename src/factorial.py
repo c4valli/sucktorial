@@ -106,6 +106,20 @@ class Factorial:
         self.logger.info("Shifts successful")
         return response.json()
     
+    def delete_last_shift(self):
+        shifts = self.shifts()
+        if len(shifts) == 0:
+            self.logger.warning("No shifts to delete")
+            return False
+        last_shift = shifts[-1]
+        response = self.session.delete(url=self.config.get("SHIFTS_URL") + f"/{last_shift['id']}")
+        if response.status_code != 204:
+            self.logger.error(f"Can't delete shift ({response.status_code})")
+            self.logger.debug(response.text)
+            raise ValueError("Can't delete shift")
+        self.logger.info("Shift deleted")
+        return True
+
     def __save_session(self):
         with open(self.config.get("COOKIE_FILE"), "wb") as file:
             pickle.dump(self.session.cookies, file)
