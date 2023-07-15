@@ -43,9 +43,8 @@ class Factorial:
             self.logger.debug(response.text)
             raise ValueError("Can't login")
         self.logger.info("Login successful")
-        with open(self.config.get("COOKIE_FILE"), "wb") as file:
-            pickle.dump(self.session.cookies, file)
-            self.logger.info("Sessions saved")
+        self.__save_session()
+
         return True
 
     def logout(self):
@@ -53,12 +52,7 @@ class Factorial:
         logout_correcty = response.status_code == 204
         self.logger.info("Logout successfully {}".format(logout_correcty))
         self.session = requests.Session()
-        path_file = self.config.get("COOKIE_FILE")
-        if os.path.exists(path_file):
-            os.remove(path_file)
-            self.logger.info("Logout: Removed cookies file")
-        # self.mates.clear()
-        # self.current_user = {}
+        self.__delete_session()
         return logout_correcty
 
     def clock_in(self):
@@ -111,6 +105,16 @@ class Factorial:
             raise ValueError("Can't get shifts")
         self.logger.info("Shifts successful")
         return response.json()
+    
+    def __save_session(self):
+        with open(self.config.get("COOKIE_FILE"), "wb") as file:
+            pickle.dump(self.session.cookies, file)
+            self.logger.info("Sessions saved")
+
+    def __delete_session(self):
+        if os.path.exists(self.config.get("COOKIE_FILE")):
+            os.remove(self.config.get("COOKIE_FILE"))
+            self.logger.info("Sessions deleted")
 
     def __get_authenticity_token(self):
         response = self.session.get(url=self.config.get("LOGIN_URL"))
