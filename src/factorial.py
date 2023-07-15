@@ -124,7 +124,13 @@ class Factorial:
         with open(self.config.get("COOKIE_FILE"), "wb") as file:
             pickle.dump(self.session.cookies, file)
             self.logger.info("Sessions saved")
-
+    
+    def __load_session(self):
+        if os.path.exists(self.config.get("COOKIE_FILE")):
+            with open(self.config.get("COOKIE_FILE"), "rb") as file:
+                self.session.cookies.update(pickle.load(file))
+                self.logger.info("Sessions loaded")
+                
     def __delete_session(self):
         if os.path.exists(self.config.get("COOKIE_FILE")):
             os.remove(self.config.get("COOKIE_FILE"))
