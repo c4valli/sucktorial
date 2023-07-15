@@ -103,6 +103,15 @@ class Factorial:
         self.logger.info("Open shift successful")
         return response.json()
 
+    def shifts(self):
+        response = self.session.get(url=self.config.get("SHIFTS_URL"))
+        if response.status_code != 200:
+            self.logger.error(f"Can't get shifts ({response.status_code})")
+            self.logger.debug(response.text)
+            raise ValueError("Can't get shifts")
+        self.logger.info("Shifts successful")
+        return response.json()
+
     def __get_authenticity_token(self):
         response = self.session.get(url=self.config.get("LOGIN_URL"))
         if response.status_code != 200:
