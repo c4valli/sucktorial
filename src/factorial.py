@@ -91,7 +91,10 @@ class Factorial:
         self.logger.info("Clock in successful at {}".format(datetime.now().isoformat()))
         return True
 
-    def open_shift(self):
+    def is_clocked_in(self) -> bool:
+        return len(self.open_shift()) == 0
+
+    def open_shift(self) -> dict:
         response = self.session.get(url=self.config.get("OPEN_SHIFT_URL"))
         if response.status_code != 200:
             self.logger.error(f"Can't get open shift ({response.status_code})")
