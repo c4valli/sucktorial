@@ -91,6 +91,15 @@ class Factorial:
         self.logger.info("Clock in successful at {}".format(datetime.now().isoformat()))
         return True
 
+    def open_shift(self):
+        response = self.session.get(url=self.config.get("OPEN_SHIFT_URL"))
+        if response.status_code != 200:
+            self.logger.error(f"Can't get open shift ({response.status_code})")
+            self.logger.debug(response.text)
+            raise ValueError("Can't get open shift")
+        self.logger.info("Open shift successful")
+        return response.json()
+
     def __get_authenticity_token(self):
         response = self.session.get(url=self.config.get("LOGIN_URL"))
         if response.status_code != 200:
