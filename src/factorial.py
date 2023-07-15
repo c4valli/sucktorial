@@ -3,6 +3,7 @@ import logging
 import os
 import pickle
 import sys
+from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
@@ -10,19 +11,36 @@ from dotenv import dotenv_values
 
 
 class Factorial:
-    def __init__(self):
+    def __init__(self, email: Optional[str] = None, password: Optional[str] = None):
+        # Check if both email and password are  (CLI usage)
+        if (email and not password) or (password and not email):
+            raise ValueError("Specify both email and password")
+
+        # Load config from .env file
         self.config = dotenv_values()
 
-        if not self.config.get("EMAIL") or not self.config.get("PASSWORD"):
-            raise ValueError("Email and password are required")
+        # If email and password are specified, override the config
+        if (email and password):
+            self.config["EMAIL"] = email
+            self.config["PASSWORD"] = password
+        # Check if email and password are correctly specified in the .env file
+        elif not self.config.get("EMAIL") or not self.config.get("PASSWORD"):
+            raise ValueError("Both email and password are required, fix your .env file")
+        
+        # Setup internal stuffs
         logging.basicConfig(
+            # Set the logging level to DEBUG if --debug is specified in the CLI
             level=logging.DEBUG if "--debug" in sys.argv else logging.INFO,
             format="%(asctime)s | %(name)s | %(levelname)s - %(message)s",
         )
-
-        self.session = requests.Session()
-
+        # Create a logger for the current class with the name "factorial"
         self.logger = logging.getLogger("factorial")
+
+        # Create a session for the requests
+        self.session = requests.Session()
+        # Load the session from the cookie file
+        self.__load_session()
+
         self.logger.info("Factorial client initialized")
 
     def login(self):
