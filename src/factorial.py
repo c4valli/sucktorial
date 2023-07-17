@@ -139,8 +139,9 @@ class Factorial:
             url=self.config.get("SHIFTS_URL"),
             hooks=self.__hook_factory("Failed to get shifts", {200}),
         )
-        self.logger.info("Shifts successful")
-        return response.json()
+        shifts = response.json()
+        self.logger.info(f"Successfully retrieved {len(shifts)} shifts")
+        return shifts
 
     def delete_shift(self, shift_id: int):
         response = self.session.delete(
