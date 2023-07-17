@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import hashlib
 import logging
 import os
 import pickle
@@ -14,6 +15,9 @@ from dotenv import dotenv_values
 
 
 class Factorial:
+    # Hidden folder where sessions files are stored
+    SESSIONS_PATH: str = os.path.join(os.path.dirname(__file__), ".sessions")
+
     def __init__(self, email: Optional[str] = None, password: Optional[str] = None):
         # Check if both email and password are  (CLI usage)
         if (email and not password) or (password and not email):
@@ -149,20 +153,36 @@ class Factorial:
         return True
 
     def __save_session(self):
-        with open(self.config.get("COOKIE_FILE"), "wb") as file:
-            pickle.dump(self.session.cookies, file)
-            self.logger.info("Sessions saved")
+        if not os.path.exists(self.SESSIONS_PATH):
+            self.logger.debug(f"Creating sessions folder at {self.SESSIONS_PATH}")
+            os.mkdir(self.SESSIONS_PATH)
+
+        email_sha256 = self.__get_email_sha256()
+        current_session_file = os.path.join(self.SESSIONS_PATH, email_sha256)
+        with open(current_session_file, "wb") as session_file:
+            pickle.dump(self.session.cookies, session_file)
+            self.logger.info(f"Session saved for {self.config.get('EMAIL')}")
+            self.logger.debug(f"Email session ID: {email_sha256}")
     
     def __load_session(self):
-        if os.path.exists(self.config.get("COOKIE_FILE")):
-            with open(self.config.get("COOKIE_FILE"), "rb") as file:
+        email_sha256 = self.__get_email_sha256()
+        current_session_file = os.path.join(self.SESSIONS_PATH, email_sha256)
+        if os.path.exists(current_session_file):
+            with open(current_session_file, "rb") as file:
                 self.session.cookies.update(pickle.load(file))
-                self.logger.info("Sessions loaded")
+                self.logger.info(f"Session loaded for {self.config.get('EMAIL')}")
+                self.logger.debug(f"Email session ID: {email_sha256}")
                 
     def __delete_session(self):
-        if os.path.exists(self.config.get("COOKIE_FILE")):
-            os.remove(self.config.get("COOKIE_FILE"))
-            self.logger.info("Sessions deleted")
+        email_sha256 = self.__get_email_sha256()
+        current_session_file = os.path.join(self.SESSIONS_PATH, email_sha256)
+        if os.path.exists(current_session_file):
+            os.remove(current_session_file)
+            self.logger.info(f"Session deleted for {self.config.get('EMAIL')}")
+            self.logger.debug(f"Email session ID: {email_sha256}")
+
+    def __get_email_sha256(self):
+        return hashlib.sha256(self.config.get("EMAIL").encode()).hexdigest() 
 
     def __get_authenticity_token(self):
         response = self.session.get(url=self.config.get("LOGIN_URL"))
