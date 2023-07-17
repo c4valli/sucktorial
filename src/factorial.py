@@ -80,16 +80,20 @@ class Factorial:
         self.__delete_session()
         self.logger.info(f"Successfully logout from {self.config.get('EMAIL')}")
 
-    def clock_in(self):
-        # TODO: Controllare se e' gia' in clock in
+    def clock_in(self, clock_in_time: Optional[datetime] = None):
+        if self.is_clocked_in():
+            self.logger.warning("Already clocked in")
+            return
+
+        if clock_in_time is None:
+            clock_in_time = datetime.now()
+        
         payload = {
-            # {"now":"2023-07-10T00:10:58+02:00","source":"desktop"}
-            "now": datetime.now().isoformat(),
+            "now": clock_in_time.isoformat(),
             "source": "desktop",
         }
         response = self.session.post(url=self.config.get("CLOCK_IN_URL"), data=payload, hooks=self.__hook_factory("Failed to clock in", {200, 201}))
-        self.logger.info("Clock in successful at {}".format(datetime.now().isoformat()))
-        return True
+        self.logger.info(f"Successfully clocked in at {clock_in_time.isoformat()}")
 
     def clock_out(self):
         # TODO: Controllare se e' gia' in clock out
