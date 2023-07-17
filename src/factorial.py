@@ -76,12 +76,9 @@ class Factorial:
         return True
 
     def logout(self):
-        response = self.session.delete(url=self.config.get("SESSION_URL"))
-        logout_correcty = response.status_code == 204
-        self.logger.info("Logout successfully {}".format(logout_correcty))
-        self.session = requests.Session()
+        response = self.session.delete(url=self.config.get("SESSION_URL"), hooks=self.__hook_factory("Failed to logout", {204}))
         self.__delete_session()
-        return logout_correcty
+        self.logger.info(f"Successfully logout from {self.config.get('EMAIL')}")
 
     def clock_in(self):
         # TODO: Controllare se e' gia' in clock in
@@ -156,6 +153,8 @@ class Factorial:
             os.remove(current_session_file)
             self.logger.info(f"Session deleted for {self.config.get('EMAIL')}")
             self.logger.debug(f"Email session ID: {email_sha256}")
+        del self.session
+        self.session = requests.Session()
 
     def __get_email_sha256(self):
         return hashlib.sha256(self.config.get("EMAIL").encode()).hexdigest() 
