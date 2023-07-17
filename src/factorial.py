@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import datetime
 import logging
 import os
 import pickle
 import sys
+from datetime import datetime
 from typing import Optional
 
 import requests
