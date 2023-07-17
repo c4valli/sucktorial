@@ -6,8 +6,8 @@ import os
 import pickle
 import sys
 from datetime import datetime
+from pprint import pformat, pprint
 from typing import Optional
-from pprint import pprint, pformat
 
 import requests
 from bs4 import BeautifulSoup
@@ -27,13 +27,13 @@ class Factorial:
         self.config = dotenv_values()
 
         # If email and password are specified, override the config
-        if (email and password):
+        if email and password:
             self.config["EMAIL"] = email
             self.config["PASSWORD"] = password
         # Check if email and password are correctly specified in the .env file
         elif not self.config.get("EMAIL") or not self.config.get("PASSWORD"):
             raise ValueError("Both email and password are required, fix your .env file")
-        
+
         # Setup internal stuffs
         logging.basicConfig(
             # Set the logging level to DEBUG if --debug is specified in the CLI
@@ -58,7 +58,7 @@ class Factorial:
         # Get a valid authenticity token from the login page
         authenticity_token = self.__get_authenticity_token()
         self.logger.debug(f"Authenticity token: {authenticity_token}")
-        
+
         payload = {
             "authenticity_token": authenticity_token,
             "user[email]": self.config.get("EMAIL"),
@@ -67,16 +67,23 @@ class Factorial:
             # "commit": "Accedi"
         }
         self.logger.debug(pformat({**payload, "user[password]": "********"}))
-        
-        response = self.session.post(url=self.config.get("LOGIN_URL"), data=payload, hooks=self.__hook_factory("Failed to login", {200, 302}))
-        
+
+        response = self.session.post(
+            url=self.config.get("LOGIN_URL"),
+            data=payload,
+            hooks=self.__hook_factory("Failed to login", {200, 302}),
+        )
+
         self.logger.info(f"Successfully logged in as {self.config.get('EMAIL')}")
         self.__save_session()
 
         return True
 
     def logout(self):
-        response = self.session.delete(url=self.config.get("SESSION_URL"), hooks=self.__hook_factory("Failed to logout", {204}))
+        response = self.session.delete(
+            url=self.config.get("SESSION_URL"),
+            hooks=self.__hook_factory("Failed to logout", {204}),
+        )
         self.__delete_session()
         self.logger.info(f"Successfully logout from {self.config.get('EMAIL')}")
 
@@ -87,12 +94,16 @@ class Factorial:
 
         if clock_in_time is None:
             clock_in_time = datetime.now()
-        
+
         payload = {
             "now": clock_in_time.isoformat(),
             "source": "desktop",
         }
-        response = self.session.post(url=self.config.get("CLOCK_IN_URL"), data=payload, hooks=self.__hook_factory("Failed to clock in", {200, 201}))
+        response = self.session.post(
+            url=self.config.get("CLOCK_IN_URL"),
+            data=payload,
+            hooks=self.__hook_factory("Failed to clock in", {200, 201}),
+        )
         self.logger.info(f"Successfully clocked in at {clock_in_time.isoformat()}")
 
     def clock_out(self):
@@ -102,7 +113,11 @@ class Factorial:
             "now": datetime.now().isoformat(),
             "source": "desktop",
         }
-        response = self.session.post(url=self.config.get("CLOCK_OUT_URL"), data=payload, hooks=self.__hook_factory("Failed to clock out", {200, 201}))
+        response = self.session.post(
+            url=self.config.get("CLOCK_OUT_URL"),
+            data=payload,
+            hooks=self.__hook_factory("Failed to clock out", {200, 201}),
+        )
         self.logger.info("Clock in successful at {}".format(datetime.now().isoformat()))
         return True
 
@@ -110,22 +125,31 @@ class Factorial:
         return len(self.open_shift()) > 0
 
     def open_shift(self) -> dict:
-        response = self.session.get(url=self.config.get("OPEN_SHIFT_URL"), hooks=self.__hook_factory("Failed to get open shift", {200}))
+        response = self.session.get(
+            url=self.config.get("OPEN_SHIFT_URL"),
+            hooks=self.__hook_factory("Failed to get open shift", {200}),
+        )
         self.logger.info("Successfully retrieved open shift")
         return response.json()
 
     def shifts(self):
-        response = self.session.get(url=self.config.get("SHIFTS_URL"), hooks=self.__hook_factory("Failed to get shifts", {200}))
+        response = self.session.get(
+            url=self.config.get("SHIFTS_URL"),
+            hooks=self.__hook_factory("Failed to get shifts", {200}),
+        )
         self.logger.info("Shifts successful")
         return response.json()
-    
+
     def delete_last_shift(self):
         shifts = self.shifts()
         if len(shifts) == 0:
             self.logger.warning("No shifts to delete")
             return False
         last_shift = shifts[-1]
-        response = self.session.delete(url=self.config.get("SHIFTS_URL") + f"/{last_shift['id']}", hooks=self.__hook_factory("Failed to delete shift", {204}))
+        response = self.session.delete(
+            url=self.config.get("SHIFTS_URL") + f"/{last_shift['id']}",
+            hooks=self.__hook_factory("Failed to delete shift", {204}),
+        )
         self.logger.info("Shift deleted")
         return True
 
@@ -140,7 +164,7 @@ class Factorial:
             pickle.dump(self.session.cookies, session_file)
             self.logger.info(f"Session saved for {self.config.get('EMAIL')}")
             self.logger.debug(f"Email session ID: {email_sha256}")
-    
+
     def __load_session(self):
         email_sha256 = self.__get_email_sha256()
         current_session_file = os.path.join(self.SESSIONS_PATH, email_sha256)
@@ -149,7 +173,7 @@ class Factorial:
                 self.session.cookies.update(pickle.load(file))
                 self.logger.info(f"Session loaded for {self.config.get('EMAIL')}")
                 self.logger.debug(f"Email session ID: {email_sha256}")
-                
+
     def __delete_session(self):
         email_sha256 = self.__get_email_sha256()
         current_session_file = os.path.join(self.SESSIONS_PATH, email_sha256)
@@ -161,10 +185,13 @@ class Factorial:
         self.session = requests.Session()
 
     def __get_email_sha256(self):
-        return hashlib.sha256(self.config.get("EMAIL").encode()).hexdigest() 
+        return hashlib.sha256(self.config.get("EMAIL").encode()).hexdigest()
 
     def __get_authenticity_token(self):
-        response = self.session.get(url=self.config.get("LOGIN_URL"), hooks=self.__hook_factory("Failed to retrieve the login page", {200}))
+        response = self.session.get(
+            url=self.config.get("LOGIN_URL"),
+            hooks=self.__hook_factory("Failed to retrieve the login page", {200}),
+        )
         html_content = BeautifulSoup(response.text, "html.parser")
         auth_token = html_content.find("input", attrs={"name": "authenticity_token"}).get("value")
         if not auth_token:
@@ -179,7 +206,9 @@ class Factorial:
                 self.logger.debug(response.text)
                 raise ValueError(message)
             return response
+
         return {"response": [__after_request]}
+
 
 if __name__ == "__main__":
     from time import sleep
