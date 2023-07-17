@@ -44,7 +44,7 @@ class Factorial:
         self.logger = logging.getLogger("factorial")
 
         # Debug-print the config
-        self.logger.debug(pformat({**self.config, "PASSWORD": "********" if self.config.get("PASSWORD") else None }))
+        self.logger.debug(pformat({**self.config, "PASSWORD": "********"}))
 
         # Create a session for the requests
         self.session = requests.Session()
