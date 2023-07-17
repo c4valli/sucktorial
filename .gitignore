@@ -1,3 +1,8 @@
 # Secrets
 .env
+
+# Sessions
+.sessions/
+
+# Environment
 venv/
