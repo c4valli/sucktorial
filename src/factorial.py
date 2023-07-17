@@ -134,7 +134,7 @@ class Factorial:
         self.logger.info("Successfully retrieved open shift")
         return response.json()
 
-    def shifts(self):
+    def get_shifts(self):
         response = self.session.get(
             url=self.config.get("SHIFTS_URL"),
             hooks=self.__hook_factory("Failed to get shifts", {200}),
@@ -142,18 +142,20 @@ class Factorial:
         self.logger.info("Shifts successful")
         return response.json()
 
-    def delete_last_shift(self):
-        shifts = self.shifts()
-        if len(shifts) == 0:
-            self.logger.warning("No shifts to delete")
-            return False
-        last_shift = shifts[-1]
+    def delete_shift(self, shift_id: int):
         response = self.session.delete(
-            url=self.config.get("SHIFTS_URL") + f"/{last_shift['id']}",
+            url=self.config.get("SHIFTS_URL") + f"/{shift_id}",
             hooks=self.__hook_factory("Failed to delete shift", {204}),
         )
-        self.logger.info("Shift deleted")
-        return True
+        self.logger.info(f"Successfully deleted shift {shift_id}")
+
+    def delete_last_shift(self):
+        shifts = self.get_shifts()
+        if len(shifts) == 0:
+            self.logger.warning("No shifts to delete")
+            return
+        last_shift = shifts[-1]
+        self.delete_shift(last_shift["id"])
 
     def __save_session(self):
         if not os.path.exists(self.SESSIONS_PATH):
@@ -216,5 +218,4 @@ if __name__ == "__main__":
     from time import sleep
 
     f = Factorial()
-    f.open_shift()
     breakpoint()
