@@ -106,11 +106,16 @@ class Factorial:
         )
         self.logger.info(f"Successfully clocked in at {clock_in_time.isoformat()}")
 
-    def clock_out(self):
-        # TODO: Controllare se e' gia' in clock out
+    def clock_out(self, clock_out_time: Optional[datetime] = None):
+        if not self.is_clocked_in():
+            self.logger.warning("Not clocked in")
+            return
+        
+        if clock_out_time is None:
+            clock_out_time = datetime.now()
+
         payload = {
-            # {"now":"2023-07-10T00:10:58+02:00","source":"desktop"}
-            "now": datetime.now().isoformat(),
+            "now": clock_out_time.isoformat(),
             "source": "desktop",
         }
         response = self.session.post(
@@ -118,8 +123,7 @@ class Factorial:
             data=payload,
             hooks=self.__hook_factory("Failed to clock out", {200, 201}),
         )
-        self.logger.info("Clock in successful at {}".format(datetime.now().isoformat()))
-        return True
+        self.logger.info(f"Successfully clocked out at {clock_out_time.isoformat()}")
 
     def is_clocked_in(self) -> bool:
         return len(self.open_shift()) > 0
