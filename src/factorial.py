@@ -63,7 +63,7 @@ class Factorial:
             "authenticity_token": authenticity_token,
             "user[email]": self.config.get("EMAIL"),
             "user[password]": self.config.get("PASSWORD"),
-            "user[remember_me]": 0,
+            "user[remember_me]": 1,
         }
         self.logger.debug(f"Payload: {payload}")
         
