@@ -122,12 +122,8 @@ class Factorial:
         return len(self.open_shift()) > 0
 
     def open_shift(self) -> dict:
-        response = self.session.get(url=self.config.get("OPEN_SHIFT_URL"))
-        if response.status_code != 200:
-            self.logger.error(f"Can't get open shift ({response.status_code})")
-            self.logger.debug(response.text)
-            raise ValueError("Can't get open shift")
-        self.logger.info("Open shift successful")
+        response = self.session.get(url=self.config.get("OPEN_SHIFT_URL"), hooks=self.__hook_factory("Failed to get open shift", {200}))
+        self.logger.info("Successfully retrieved open shift")
         return response.json()
 
     def shifts(self):
@@ -197,6 +193,15 @@ class Factorial:
             raise ValueError("Can't retrieve the authenticity token")
         return auth_token
 
+    def __hook_factory(self, error_msg: str, ok_codes: set[int]):
+        def __after_request(response: requests.Response, **kwargs):
+            if response.status_code not in ok_codes:
+                message = f"({response.status_code} {response.reason}) {error_msg}"
+                self.logger.error(message)
+                self.logger.debug(response.text)
+                raise ValueError(message)
+            return response
+        return {"response": [__after_request]}
 
 if __name__ == "__main__":
     from time import sleep
