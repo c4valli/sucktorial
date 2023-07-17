@@ -68,14 +68,9 @@ class Factorial:
         }
         self.logger.debug(pformat({**payload, "user[password]": "********"}))
         
-        response = self.session.post(url=self.config.get("LOGIN_URL"), data=payload)
+        response = self.session.post(url=self.config.get("LOGIN_URL"), data=payload, hooks=self.__hook_factory("Failed to login", {200, 302}))
         
-        if response.status_code not in {200, 302}:
-            self.logger.error(f"Can't login ({response.status_code})")
-            self.logger.debug(response.text)
-            raise ValueError("Can't login")
-        
-        self.logger.info("Login successful")
+        self.logger.info(f"Successfully logged in as {self.config.get('EMAIL')}")
         self.__save_session()
 
         return True
@@ -95,11 +90,7 @@ class Factorial:
             "now": datetime.now().isoformat(),
             "source": "desktop",
         }
-        response = self.session.post(url=self.config.get("CLOCK_IN_URL"), data=payload)
-        if response.status_code not in {200, 201}:
-            self.logger.error(f"Can't clock in ({response.status_code})")
-            self.logger.debug(response.text)
-            raise ValueError("Can't clock in")
+        response = self.session.post(url=self.config.get("CLOCK_IN_URL"), data=payload, hooks=self.__hook_factory("Failed to clock in", {200, 201}))
         self.logger.info("Clock in successful at {}".format(datetime.now().isoformat()))
         return True
 
@@ -110,11 +101,7 @@ class Factorial:
             "now": datetime.now().isoformat(),
             "source": "desktop",
         }
-        response = self.session.post(url=self.config.get("CLOCK_OUT_URL"), data=payload)
-        if response.status_code not in {200, 201}:
-            self.logger.error(f"Can't clock in ({response.status_code})")
-            self.logger.debug(response.text)
-            raise ValueError("Can't clock in")
+        response = self.session.post(url=self.config.get("CLOCK_OUT_URL"), data=payload, hooks=self.__hook_factory("Failed to clock out", {200, 201}))
         self.logger.info("Clock in successful at {}".format(datetime.now().isoformat()))
         return True
 
@@ -127,11 +114,7 @@ class Factorial:
         return response.json()
 
     def shifts(self):
-        response = self.session.get(url=self.config.get("SHIFTS_URL"))
-        if response.status_code != 200:
-            self.logger.error(f"Can't get shifts ({response.status_code})")
-            self.logger.debug(response.text)
-            raise ValueError("Can't get shifts")
+        response = self.session.get(url=self.config.get("SHIFTS_URL"), hooks=self.__hook_factory("Failed to get shifts", {200}))
         self.logger.info("Shifts successful")
         return response.json()
     
@@ -141,11 +124,7 @@ class Factorial:
             self.logger.warning("No shifts to delete")
             return False
         last_shift = shifts[-1]
-        response = self.session.delete(url=self.config.get("SHIFTS_URL") + f"/{last_shift['id']}")
-        if response.status_code != 204:
-            self.logger.error(f"Can't delete shift ({response.status_code})")
-            self.logger.debug(response.text)
-            raise ValueError("Can't delete shift")
+        response = self.session.delete(url=self.config.get("SHIFTS_URL") + f"/{last_shift['id']}", hooks=self.__hook_factory("Failed to delete shift", {204}))
         self.logger.info("Shift deleted")
         return True
 
@@ -182,11 +161,7 @@ class Factorial:
         return hashlib.sha256(self.config.get("EMAIL").encode()).hexdigest() 
 
     def __get_authenticity_token(self):
-        response = self.session.get(url=self.config.get("LOGIN_URL"))
-        if response.status_code != 200:
-            self.logger.error(f"Can't retrieve the login page ({response.status_code})")
-            self.logger.debug(response.text)
-            raise ValueError("Can't retrieve the login page")
+        response = self.session.get(url=self.config.get("LOGIN_URL"), hooks=self.__hook_factory("Failed to retrieve the login page", {200}))
         html_content = BeautifulSoup(response.text, "html.parser")
         auth_token = html_content.find("input", attrs={"name": "authenticity_token"}).get("value")
         if not auth_token:
@@ -206,12 +181,6 @@ class Factorial:
 if __name__ == "__main__":
     from time import sleep
 
-    factorial = Factorial()
-    print(factorial.config)
-    factorial.login()
-    sleep(3)
-    factorial.clock_in()
-    sleep(10)
-    factorial.clock_out()
-    sleep(3)
-    factorial.logout()
+    f = Factorial()
+    f.open_shift()
+    breakpoint()
