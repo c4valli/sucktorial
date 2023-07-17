@@ -118,7 +118,7 @@ class Factorial:
         return True
 
     def is_clocked_in(self) -> bool:
-        return len(self.open_shift()) == 0
+        return len(self.open_shift()) > 0
 
     def open_shift(self) -> dict:
         response = self.session.get(url=self.config.get("OPEN_SHIFT_URL"))
