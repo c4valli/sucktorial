@@ -6,6 +6,7 @@ import pickle
 import sys
 from datetime import datetime
 from typing import Optional
+from pprint import pprint, pformat
 
 import requests
 from bs4 import BeautifulSoup
@@ -38,6 +39,9 @@ class Factorial:
         # Create a logger for the current class with the name "factorial"
         self.logger = logging.getLogger("factorial")
 
+        # Debug-print the config
+        self.logger.debug(pformat({**self.config, "PASSWORD": "********" if self.config.get("PASSWORD") else None }))
+
         # Create a session for the requests
         self.session = requests.Session()
         # Load the session from the cookie file
@@ -47,21 +51,25 @@ class Factorial:
 
     def login(self):
         # TODO: Controllare se l'utente è già loggato
+        # Get a valid authenticity token from the login page
         authenticity_token = self.__get_authenticity_token()
         self.logger.debug(f"Authenticity token: {authenticity_token}")
+        
         payload = {
             "authenticity_token": authenticity_token,
             "user[email]": self.config.get("EMAIL"),
             "user[password]": self.config.get("PASSWORD"),
             "user[remember_me]": 0,
-            "commit": "Accedi",
         }
         self.logger.debug(f"Payload: {payload}")
+        
         response = self.session.post(url=self.config.get("LOGIN_URL"), data=payload)
+        
         if response.status_code != 200:
             self.logger.error(f"Can't login ({response.status_code})")
             self.logger.debug(response.text)
             raise ValueError("Can't login")
+        
         self.logger.info("Login successful")
         self.__save_session()
 
