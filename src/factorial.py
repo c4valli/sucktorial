@@ -74,10 +74,8 @@ class Factorial:
             hooks=self.__hook_factory("Failed to login", {200, 302}),
         )
 
-        self.logger.info(f"Successfully logged in as {self.config.get('EMAIL')}")
         self.__save_session()
-
-        return True
+        self.logger.info(f"Successfully logged in as {self.config.get('EMAIL')}")
 
     def logout(self):
         response = self.session.delete(
