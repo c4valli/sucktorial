@@ -143,6 +143,14 @@ class Factorial:
         self.logger.info(f"Successfully retrieved {len(shifts)} shifts")
         return shifts
 
+    def update_shift(self, shift_id: int, **kwargs):
+        response = self.session.patch(
+            url=self.config.get("SHIFTS_URL") + f"/{shift_id}",
+            data=kwargs,
+            hooks=self.__hook_factory("Failed to update shift", {200}),
+        )
+        self.logger.info(f"Successfully updated shift {shift_id}")
+
     def delete_shift(self, shift_id: int):
         response = self.session.delete(
             url=self.config.get("SHIFTS_URL") + f"/{shift_id}",
