@@ -64,12 +64,13 @@ class Factorial:
             "user[email]": self.config.get("EMAIL"),
             "user[password]": self.config.get("PASSWORD"),
             "user[remember_me]": 1,
+            # "commit": "Accedi"
         }
-        self.logger.debug(f"Payload: {payload}")
+        self.logger.debug(pformat({**payload, "user[password]": "********"}))
         
         response = self.session.post(url=self.config.get("LOGIN_URL"), data=payload)
         
-        if response.status_code != 200:
+        if response.status_code not in {200, 302}:
             self.logger.error(f"Can't login ({response.status_code})")
             self.logger.debug(response.text)
             raise ValueError("Can't login")
