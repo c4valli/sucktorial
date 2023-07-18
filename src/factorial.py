@@ -134,9 +134,11 @@ class Factorial:
         self.logger.info("Successfully retrieved open shift")
         return response.json()
 
-    def get_shifts(self):
+    def get_shifts(self, **kwargs):
+        # employee_id, (period_id, (year, month))
         response = self.session.get(
             url=self.config.get("SHIFTS_URL"),
+            params=kwargs,
             hooks=self.__hook_factory("Failed to get shifts", {200}),
         )
         shifts = response.json()
@@ -144,6 +146,7 @@ class Factorial:
         return shifts
 
     def update_shift(self, shift_id: int, **kwargs):
+        # clock_in, clock_out, period_id
         response = self.session.patch(
             url=self.config.get("SHIFTS_URL") + f"/{shift_id}",
             data=kwargs,
@@ -165,6 +168,17 @@ class Factorial:
             return
         last_shift = shifts[-1]
         self.delete_shift(last_shift["id"])
+
+    def get_periods(self, **kwargs):
+        # (start_on, end_on), (year, month) 
+        response = self.session.get(
+            url=self.config.get("PERIODS_URL"),
+            params=kwargs,
+            hooks=self.__hook_factory("Failed to get periods", {200}),
+        )
+        periods = response.json()
+        self.logger.info(f"Successfully retrieved {len(periods)} periods")
+        return periods
 
     def __save_session(self):
         if not os.path.exists(self.SESSIONS_PATH):
