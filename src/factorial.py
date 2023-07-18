@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import contextlib
 import hashlib
 import logging
 import os
@@ -54,7 +55,13 @@ class Factorial:
         self.logger.info("Factorial client initialized")
 
     def login(self):
-        # TODO: Controllare se l'utente è già loggato
+        # Check if the user is already logged in by trying to get the open shift
+        with contextlib.suppress(ValueError):
+            self.is_clocked_in()
+            # If no exception is raised, the user is already logged in
+            self.logger.warning(f"Already logged in as {self.config.get('EMAIL')}")
+            return
+
         # Get a valid authenticity token from the login page
         authenticity_token = self.__get_authenticity_token()
         self.logger.debug(f"Authenticity token: {authenticity_token}")
