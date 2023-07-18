@@ -18,6 +18,8 @@ from dotenv import dotenv_values
 class Factorial:
     # Hidden folder where sessions files are stored
     SESSIONS_PATH: str = os.path.join(os.path.dirname(__file__), ".sessions")
+    # Default user agent
+    DEFAULT_USER_AGENT: str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
     def __init__(self, email: Optional[str] = None, password: Optional[str] = None):
         # Check if both email and password are  (CLI usage)
@@ -51,6 +53,10 @@ class Factorial:
         self.session = requests.Session()
         # Load the session from the cookie file
         self.__load_session()
+        # Set the user agent
+        self.session.headers.update(
+            {"User-Agent": self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)}
+        )
 
         self.logger.info("Factorial client initialized")
 
@@ -115,7 +121,7 @@ class Factorial:
         if not self.is_clocked_in():
             self.logger.warning("Not clocked in")
             return
-        
+
         if clock_out_time is None:
             clock_out_time = datetime.now()
 
@@ -177,7 +183,7 @@ class Factorial:
         self.delete_shift(last_shift["id"])
 
     def get_periods(self, **kwargs):
-        # (start_on, end_on), (year, month) 
+        # (start_on, end_on), (year, month)
         response = self.session.get(
             url=self.config.get("PERIODS_URL"),
             params=kwargs,
