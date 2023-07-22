@@ -6,8 +6,9 @@ import logging
 import os
 import pickle
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pprint import pformat, pprint
+from random import randint
 from typing import Optional
 
 import requests
@@ -249,9 +250,118 @@ class Factorial:
 
         return {"response": [__after_request]}
 
+    @staticmethod
+    def get_args_parser():
+        from argparse import ArgumentParser
+
+        parser = ArgumentParser(description="Sucktorial CLI")
+
+        credentials_group = parser.add_argument_group("Credentials")
+        credentials_group.add_argument(
+            "--email",
+            "-e",
+            type=str,
+            help="Email to login with",
+        )
+        credentials_group.add_argument(
+            "--password",
+            "-p",
+            type=str,
+            help="Password to login with",
+        )
+
+        action_group = parser.add_argument_group("Actions")
+        action_group.add_argument(
+            "--login",
+            action="store_true",
+            help="Login to Factorial",
+        )
+        action_group.add_argument(
+            "--logout",
+            action="store_true",
+            help="Logout from Factorial",
+        )
+        action_group.add_argument(
+            "--clock-in",
+            action="store_true",
+            help="Clock in",
+        )
+        action_group.add_argument(
+            "--clock-out",
+            action="store_true",
+            help="Clock out",
+        )
+        action_group.add_argument(
+            "--clocked-in",
+            action="store_true",
+            help="Check if you are clocked in",
+        )
+
+        customization_group = parser.add_argument_group("Customization")
+        customization_group.add_argument(
+            "--random-clock",
+            action="store_true",
+            help="Clock in/out at a random time (+/- 15 minutes from now)",
+        )
+        customization_group.add_argument(
+            "--user-agent",
+            type=str,
+            help="User agent to use for the requests",
+        )
+        customization_group.add_argument(
+            "--debug",
+            action="store_true",
+            help="Enable debug logging",
+        )
+
+        return parser
+
+    @staticmethod
+    def validate_args(args, parser):
+        if (args.email and not args.password) or (args.password and not args.email):
+            parser.error("Specify both email and password")
+
+        if args.random_clock and not (args.clock_in or args.clock_out):
+            parser.error("Specify --clock-in or --clock-out with --random-clock")
+
+        if not (args.login or args.logout or args.clock_in or args.clock_out or args.clocked_in):
+            parser.error("Specify at least one action")
+
+        if (
+            int(args.login)
+            + int(args.logout)
+            + int(args.clock_in)
+            + int(args.clock_out)
+            + int(args.clocked_in)
+        ) > 1:
+            parser.error("Specify only one action")
+
+    @staticmethod
+    def run_from_cli():
+        parser = Factorial.get_args_parser()
+        args, _ = parser.parse_known_args()
+        Factorial.validate_args(args, parser)
+
+        factorial = Factorial(args.email, args.password)
+
+        if args.user_agent:
+            factorial.config["USER_AGENT"] = args.user_agent
+
+        if args.login:
+            factorial.login()
+        elif args.logout:
+            factorial.logout()
+        elif args.clock_in:
+            factorial.clock_in(
+                datetime.now() + timedelta(minutes=randint(-15, 15)) if args.random_clock else None
+            )
+        elif args.clock_out:
+            factorial.clock_out(
+                datetime.now() + timedelta(minutes=randint(-15, 15)) if args.random_clock else None
+            )
+        elif args.clocked_in:
+            print(factorial.is_clocked_in())
+
 
 if __name__ == "__main__":
-    from time import sleep
-
-    f = Factorial()
-    breakpoint()
+    Factorial.run_from_cli()
