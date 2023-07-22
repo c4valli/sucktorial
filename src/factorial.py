@@ -415,6 +415,9 @@ class Factorial:
                 self.logger.error(message)
                 self.logger.debug(response.text)
                 raise ValueError(message)
+            # Success
+            self.logger.debug(f"({response.status_code} {response.reason}) {response.url}")
+            self.logger.debug(response.text)
             return response
 
         return {"response": [__after_request]}
