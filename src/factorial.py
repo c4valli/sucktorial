@@ -45,7 +45,7 @@ class Factorial:
         # Setup internal stuffs
         logging.basicConfig(
             # Set the logging level to DEBUG if --debug is specified in the CLI
-            level=logging.DEBUG if "--debug" in sys.argv else logging.INFO,
+            level=logging.DEBUG if kwargs.get("debug") else logging.INFO,
             format="%(asctime)s | %(name)s | %(levelname)s - %(message)s",
         )
         # Create a logger for the current class with the name "factorial"
@@ -60,7 +60,7 @@ class Factorial:
         self.__load_session()
         # Set the user agent
         self.session.headers.update(
-            {"User-Agent": self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)}
+            {"User-Agent": kwargs.get("user_agent") or self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)}
         )
 
         self.logger.info("Factorial client initialized")
