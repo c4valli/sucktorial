@@ -31,6 +31,20 @@ class Factorial:
         debug: bool = False,
         **kwargs,
     ):
+        """Factorial client.
+
+        Args:
+            email (str, optional): your email. Defaults to None.
+            password (str, optional): your password. Defaults to None.
+            user_agent (str, optional): custom user agent. Defaults to None.
+            env (Optional[str], optional): custom .<user>.env file with credentials. Defaults to None.
+            debug (bool, optional): enable debug mode. Defaults to False.
+
+        Raises:
+            ValueError: if none or only one between email and password were specified,
+                here or in the .env file
+        """
+
         # Check if both email and password are  (CLI usage)
         if (email and not password) or (password and not email):
             raise ValueError("Specify both email and password")
@@ -78,6 +92,7 @@ class Factorial:
         self.logger.info("Factorial client initialized")
 
     def login(self):
+        """Login to Factorial. If the user is already logged in, do nothing."""
         # Check if the user is already logged in by trying to get the open shift
         with contextlib.suppress(ValueError):
             self.is_clocked_in()
@@ -108,6 +123,7 @@ class Factorial:
         self.logger.info(f"Successfully logged in as {self.config.get('EMAIL')}")
 
     def logout(self):
+        """Logout from Factorial."""
         response = self.session.delete(
             url=self.config.get("SESSION_URL"),
             hooks=self.__hook_factory("Failed to logout", {204}),
@@ -116,6 +132,12 @@ class Factorial:
         self.logger.info(f"Successfully logout from {self.config.get('EMAIL')}")
 
     def clock_in(self, clock_in_time: Optional[datetime] = None):
+        """Clock in. If the user is already clocked in, do nothing. If no clock in time is specified,
+        clock in at the current time.
+
+        Args:
+            clock_in_time (datetime, optional): clock-in time. Defaults to None.
+        """
         if self.is_clocked_in():
             self.logger.warning("Already clocked in")
             return
@@ -135,6 +157,12 @@ class Factorial:
         self.logger.info(f"Successfully clocked in at {clock_in_time.isoformat()}")
 
     def clock_out(self, clock_out_time: Optional[datetime] = None):
+        """Clock out. If the user is not clocked in, do nothing. If no clock out time is specified,
+        clock out at the current time.
+
+        Args:
+            clock_out_time (datetime, optional): clock-out time. Defaults to None.
+        """
         if not self.is_clocked_in():
             self.logger.warning("Not clocked in")
             return
@@ -154,9 +182,19 @@ class Factorial:
         self.logger.info(f"Successfully clocked out at {clock_out_time.isoformat()}")
 
     def is_clocked_in(self) -> bool:
+        """Check if the user is clocked in. If it is, open_shift() will return a non-empty dict.
+
+        Returns:
+            bool: True if the user is clocked in, False otherwise.
+        """
         return len(self.open_shift()) > 0
 
     def open_shift(self) -> dict:
+        """Get the current eventually open shift. If the user is not clocked in, return an empty dict.
+
+        Returns:
+            dict: the current open shift (if any) or an empty dict.
+        """
         response = self.session.get(
             url=self.config.get("OPEN_SHIFT_URL"),
             hooks=self.__hook_factory("Failed to get open shift", {200}),
@@ -203,10 +241,11 @@ class Factorial:
 
         response = self.session.get(
             url=self.config.get("SHIFTS_URL"),
-            params=kwargs,
+            params=params,
             hooks=self.__hook_factory("Failed to get shifts", {200}),
         )
         shifts = response.json()
+
         self.logger.info(f"Successfully retrieved {len(shifts)} shifts")
         return shifts
 
