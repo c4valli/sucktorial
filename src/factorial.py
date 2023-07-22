@@ -164,8 +164,43 @@ class Factorial:
         self.logger.info("Successfully retrieved open shift")
         return response.json()
 
-    def get_shifts(self, **kwargs):
-        # employee_id, (period_id, (year, month))
+    def get_shifts(
+        self,
+        period_id: Optional[int] = None,
+        year: Optional[int] = None,
+        month: Optional[int] = None,
+    ) -> list[dict]:
+        """Get the shifts for the specified period.
+        If no period is specified, get the shifts for the current month. (?)
+
+
+        Args:
+            period_id (int, optional): period ID. Defaults to None.
+            year (int, optional): filter by year, requires month. Defaults to None.
+            month (int, optional): filter by month, requires year.  Defaults to None.
+
+        Raises:
+            ValueError: if both period_id and (year or month) are specified
+                or if only one between year and month is specified.
+
+        Returns:
+            list[dict]: list of shifts.
+        """
+
+        if period_id and (year or month):
+            raise ValueError("Specify either period_id or year and month")
+
+        if (year and not month) or (month and not year):
+            raise ValueError("Specify both year and month")
+
+        params = {}
+        if period_id:
+            params["period_id"] = period_id
+        if year:
+            params["year"] = year
+        if month:
+            params["month"] = month
+
         response = self.session.get(
             url=self.config.get("SHIFTS_URL"),
             params=kwargs,
