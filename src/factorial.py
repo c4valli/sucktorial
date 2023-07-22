@@ -60,7 +60,10 @@ class Factorial:
         self.__load_session()
         # Set the user agent
         self.session.headers.update(
-            {"User-Agent": kwargs.get("user_agent") or self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)}
+            {
+                "User-Agent": kwargs.get("user_agent")
+                or self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)
+            }
         )
 
         self.logger.info("Factorial client initialized")
@@ -304,8 +307,10 @@ class Factorial:
         customization_group = parser.add_argument_group("Customization")
         customization_group.add_argument(
             "--random-clock",
-            action="store_true",
-            help="Clock in/out at a random time (+/- 15 minutes from now)",
+            type=int,
+            nargs="?",
+            const=15,
+            help="Clock in/out at a random time (+/- X minutes from now)",
         )
         customization_group.add_argument(
             "--user-agent",
@@ -359,11 +364,15 @@ class Factorial:
             factorial.logout()
         elif args.clock_in:
             factorial.clock_in(
-                datetime.now() + timedelta(minutes=randint(-15, 15)) if args.random_clock else None
+                datetime.now() + timedelta(minutes=randint(-args.random_clock, args.random_clock))
+                if args.random_clock is not None
+                else None
             )
         elif args.clock_out:
             factorial.clock_out(
-                datetime.now() + timedelta(minutes=randint(-15, 15)) if args.random_clock else None
+                datetime.now() + timedelta(minutes=randint(-args.random_clock, args.random_clock))
+                if args.random_clock is not None
+                else None
             )
         elif args.clocked_in:
             print(factorial.is_clocked_in())
