@@ -328,6 +328,15 @@ class Factorial:
         self.logger.info(f"Successfully retrieved {len(leaves)} leaves")
         return leaves
 
+    def on_leave(self) -> bool:
+        """Check if the user is on leave.
+
+        Returns:
+            bool: True if the user is on leave, False otherwise.
+        """
+        today = datetime.now()
+        return len(self.get_leaves(from_date=today, to_date=today)) > 0
+
     def __save_session(self):
         """Save the session cookie file."""
         if not os.path.exists(self.SESSIONS_PATH):
