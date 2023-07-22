@@ -22,7 +22,15 @@ class Factorial:
     # Default user agent
     DEFAULT_USER_AGENT: str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
-    def __init__(self, email: Optional[str] = None, password: Optional[str] = None, **kwargs):
+    def __init__(
+        self,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+        user_agent: Optional[str] = None,
+        env: Optional[str] = None,
+        debug: bool = False,
+        **kwargs,
+    ):
         # Check if both email and password are  (CLI usage)
         if (email and not password) or (password and not email):
             raise ValueError("Specify both email and password")
@@ -30,9 +38,9 @@ class Factorial:
         # Load config from .env file
         self.config = dotenv_values()
 
-        if kwargs.get("env"):
-            # If a custom .env file is specified, load it
-            self.config.update(dotenv_values(f".{kwargs.get('env')}.env"))
+        # If a custom .env file is specified, load it
+        if env or kwargs.get("env"):
+            self.config.update(dotenv_values(f".{env or kwargs.get('env')}.env"))
 
         # If email and password are specified, override the config
         if email and password:
@@ -45,7 +53,7 @@ class Factorial:
         # Setup internal stuffs
         logging.basicConfig(
             # Set the logging level to DEBUG if --debug is specified in the CLI
-            level=logging.DEBUG if kwargs.get("debug") else logging.INFO,
+            level=logging.DEBUG if debug or kwargs.get("debug") else logging.INFO,
             format="%(asctime)s | %(name)s | %(levelname)s - %(message)s",
         )
         # Create a logger for the current class with the name "factorial"
@@ -61,7 +69,8 @@ class Factorial:
         # Set the user agent
         self.session.headers.update(
             {
-                "User-Agent": kwargs.get("user_agent")
+                "User-Agent": user_agent
+                or kwargs.get("user_agent")
                 or self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)
             }
         )
