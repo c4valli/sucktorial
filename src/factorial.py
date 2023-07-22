@@ -300,6 +300,34 @@ class Factorial:
         self.logger.info(f"Successfully retrieved {len(periods)} periods")
         return periods
 
+    def get_leaves(
+        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
+    ) -> list[dict]:
+        """Get the leaves for the specified period. If no period is specified, get the all the leaves. (?)
+
+        Args:
+            from_date (datetime, optional): from date. Defaults to None.
+            to_date (datetime, optional): to date. Defaults to None.
+
+        Returns:
+            list[dict]: list of leaves.
+        """
+        params = {}
+        if from_date:
+            params["from_date"] = from_date.isoformat()
+        if to_date:
+            params["to_date"] = to_date.isoformat()
+
+        response = self.session.get(
+            url=self.config.get("LEAVES_URL"),
+            params=params,
+            hooks=self.__hook_factory("Failed to get leaves", {200}),
+        )
+        leaves = response.json()
+
+        self.logger.info(f"Successfully retrieved {len(leaves)} leaves")
+        return leaves
+
     def __save_session(self):
         """Save the session cookie file."""
         if not os.path.exists(self.SESSIONS_PATH):
@@ -363,10 +391,11 @@ class Factorial:
         Args:
             error_msg (str): error message to be logged.
             ok_codes (set[int]): set of valid status codes.
-        
+
         Returns:
             dict: hook to be used in the requests.
         """
+
         def __after_request(response: requests.Response, **kwargs) -> requests.Response:
             """Check if the response status code is in the ok_codes set. If not, log the error message
             and raise a ValueError. Otherwise, return the response. This function is used as a hook
@@ -436,6 +465,16 @@ class Factorial:
             action="store_true",
             help="Check if you are clocked in",
         )
+        action_group.add_argument(
+            "--shifts",
+            action="store_true",
+            help="Get the shifts",
+        )
+        action_group.add_argument(
+            "--leaves",
+            action="store_true",
+            help="Get the leaves",
+        )
 
         customization_group = parser.add_argument_group("Customization")
         customization_group.add_argument(
@@ -471,7 +510,15 @@ class Factorial:
         if args.random_clock and not (args.clock_in or args.clock_out):
             parser.error("Specify --clock-in or --clock-out with --random-clock")
 
-        if not (args.login or args.logout or args.clock_in or args.clock_out or args.clocked_in):
+        if not (
+            args.login
+            or args.logout
+            or args.clock_in
+            or args.clock_out
+            or args.clocked_in
+            or args.shifts
+            or args.leaves
+        ):
             parser.error("Specify at least one action")
 
         if (
@@ -480,6 +527,8 @@ class Factorial:
             + int(args.clock_in)
             + int(args.clock_out)
             + int(args.clocked_in)
+            + int(args.shifts)
+            + int(args.leaves)
         ) > 1:
             parser.error("Specify only one action")
 
@@ -509,6 +558,10 @@ class Factorial:
             )
         elif args.clocked_in:
             print(factorial.is_clocked_in())
+        elif args.shifts:
+            pprint(factorial.get_shifts())
+        elif args.leaves:
+            pprint(factorial.get_leaves())
 
 
 if __name__ == "__main__":
