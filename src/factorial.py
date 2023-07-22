@@ -155,6 +155,11 @@ class Factorial:
         if clock_in_time is None:
             clock_in_time = datetime.now()
 
+        # If the user is on leave, do nothing
+        if clock_in_time.date() == datetime.now().date() and self.on_leave():
+            self.logger.error("Today you're on leave, go back to sleep")
+            return
+
         payload = {
             "now": clock_in_time.isoformat(),
             "source": "desktop",
