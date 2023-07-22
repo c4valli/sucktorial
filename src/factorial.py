@@ -91,8 +91,12 @@ class Factorial:
 
         self.logger.info("Factorial client initialized")
 
-    def login(self):
-        """Login to Factorial. If the user is already logged in, do nothing."""
+    def login(self, save_session: bool = True):
+        """Login to Factorial. If the user is already logged in, do nothing.
+
+        Args:
+            save_session (bool, optional): save the session to a cookie file. Defaults to True.
+        """
         # Check if the user is already logged in by trying to get the open shift
         with contextlib.suppress(ValueError):
             self.is_clocked_in()
@@ -119,16 +123,22 @@ class Factorial:
             hooks=self.__hook_factory("Failed to login", {200, 302}),
         )
 
-        self.__save_session()
+        if save_session:
+            self.__save_session()
         self.logger.info(f"Successfully logged in as {self.config.get('EMAIL')}")
 
-    def logout(self):
-        """Logout from Factorial."""
+    def logout(self, delete_session: bool = True):
+        """Logout from Factorial.
+
+        Args:
+            delete_session (bool, optional): delete the session cookie file. Defaults to True.
+        """
         response = self.session.delete(
             url=self.config.get("SESSION_URL"),
             hooks=self.__hook_factory("Failed to logout", {204}),
         )
-        self.__delete_session()
+        if delete_session:
+            self.__delete_session()
         self.logger.info(f"Successfully logout from {self.config.get('EMAIL')}")
 
     def clock_in(self, clock_in_time: Optional[datetime] = None):
