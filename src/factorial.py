@@ -314,9 +314,9 @@ class Factorial:
         """
         params = {}
         if from_date:
-            params["from_date"] = from_date.isoformat()
+            params["from"] = from_date.strftime("%Y-%m-%d")
         if to_date:
-            params["to_date"] = to_date.isoformat()
+            params["to"] = to_date.strftime("%Y-%m-%d")
 
         response = self.session.get(
             url=self.config.get("LEAVES_URL"),
