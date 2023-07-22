@@ -22,7 +22,7 @@ class Factorial:
     # Default user agent
     DEFAULT_USER_AGENT: str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
-    def __init__(self, email: Optional[str] = None, password: Optional[str] = None):
+    def __init__(self, email: Optional[str] = None, password: Optional[str] = None, **kwargs):
         # Check if both email and password are  (CLI usage)
         if (email and not password) or (password and not email):
             raise ValueError("Specify both email and password")
@@ -342,10 +342,7 @@ class Factorial:
         args, _ = parser.parse_known_args()
         Factorial.validate_args(args, parser)
 
-        factorial = Factorial(args.email, args.password)
-
-        if args.user_agent:
-            factorial.config["USER_AGENT"] = args.user_agent
+        factorial = Factorial(**vars(args))
 
         if args.login:
             factorial.login()
