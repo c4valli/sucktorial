@@ -312,7 +312,7 @@ class Factorial:
         Returns:
             list[dict]: list of leaves.
         """
-        params = {}
+        params = {"employee_id": self.config.get("EMPLOYEE_ID")}
         if from_date:
             params["from"] = from_date.strftime("%Y-%m-%d")
         if to_date:
