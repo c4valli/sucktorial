@@ -269,6 +269,11 @@ class Factorial:
         self.logger.info(f"Successfully updated shift {shift_id}")
 
     def delete_shift(self, shift_id: int):
+        """Delete a shift.
+
+        Args:
+            shift_id (int): shift ID.
+        """
         response = self.session.delete(
             url=self.config.get("SHIFTS_URL") + f"/{shift_id}",
             hooks=self.__hook_factory("Failed to delete shift", {204}),
@@ -276,6 +281,7 @@ class Factorial:
         self.logger.info(f"Successfully deleted shift {shift_id}")
 
     def delete_last_shift(self):
+        """Delete the last shift, if any."""
         shifts = self.get_shifts()
         if len(shifts) == 0:
             self.logger.warning("No shifts to delete")
@@ -295,6 +301,7 @@ class Factorial:
         return periods
 
     def __save_session(self):
+        """Save the session cookie file."""
         if not os.path.exists(self.SESSIONS_PATH):
             self.logger.debug(f"Creating sessions folder at {self.SESSIONS_PATH}")
             os.mkdir(self.SESSIONS_PATH)
@@ -307,6 +314,7 @@ class Factorial:
             self.logger.debug(f"Email session ID: {email_sha256}")
 
     def __load_session(self):
+        """Load the session cookie file."""
         email_sha256 = self.__get_email_sha256()
         current_session_file = os.path.join(self.SESSIONS_PATH, email_sha256)
         if os.path.exists(current_session_file):
@@ -316,6 +324,7 @@ class Factorial:
                 self.logger.debug(f"Email session ID: {email_sha256}")
 
     def __delete_session(self):
+        """Delete the session cookie file."""
         email_sha256 = self.__get_email_sha256()
         current_session_file = os.path.join(self.SESSIONS_PATH, email_sha256)
         if os.path.exists(current_session_file):
@@ -325,10 +334,19 @@ class Factorial:
         del self.session
         self.session = requests.Session()
 
-    def __get_email_sha256(self):
+    def __get_email_sha256(self) -> str:
+        """Get the SHA256 hash of the email."""
         return hashlib.sha256(self.config.get("EMAIL").encode()).hexdigest()
 
-    def __get_authenticity_token(self):
+    def __get_authenticity_token(self) -> str:
+        """Get a valid authenticity token from the login page.
+
+        Raises:
+            ValueError: if the authenticity token can't be retrieved.
+
+        Returns:
+            str: authenticity token.
+        """
         response = self.session.get(
             url=self.config.get("LOGIN_URL"),
             hooks=self.__hook_factory("Failed to retrieve the login page", {200}),
@@ -339,8 +357,30 @@ class Factorial:
             raise ValueError("Can't retrieve the authenticity token")
         return auth_token
 
-    def __hook_factory(self, error_msg: str, ok_codes: set[int]):
-        def __after_request(response: requests.Response, **kwargs):
+    def __hook_factory(self, error_msg: str, ok_codes: set[int]) -> dict:
+        """Create a hook to be used in the requests.
+
+        Args:
+            error_msg (str): error message to be logged.
+            ok_codes (set[int]): set of valid status codes.
+        
+        Returns:
+            dict: hook to be used in the requests.
+        """
+        def __after_request(response: requests.Response, **kwargs) -> requests.Response:
+            """Check if the response status code is in the ok_codes set. If not, log the error message
+            and raise a ValueError. Otherwise, return the response. This function is used as a hook
+            in the requests.
+
+            Args:
+                response (requests.Response): response object.
+
+            Raises:
+                ValueError: if the response status code is not in the ok_codes set.
+
+            Returns:
+                requests.Response: response object.
+            """
             if response.status_code not in ok_codes:
                 message = f"({response.status_code} {response.reason}) {error_msg}"
                 self.logger.error(message)
