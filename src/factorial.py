@@ -30,6 +30,10 @@ class Factorial:
         # Load config from .env file
         self.config = dotenv_values()
 
+        if kwargs.get("env"):
+            # If a custom .env file is specified, load it
+            self.config.update(dotenv_values(f".{kwargs.get('env')}.env"))
+
         # If email and password are specified, override the config
         if email and password:
             self.config["EMAIL"] = email
@@ -307,6 +311,11 @@ class Factorial:
             "--user-agent",
             type=str,
             help="User agent to use for the requests",
+        )
+        customization_group.add_argument(
+            "--env",
+            type=str,
+            help="Name of the user custom .env file (.<user>.env)",
         )
         customization_group.add_argument(
             "--debug",
