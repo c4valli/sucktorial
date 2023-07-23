@@ -86,9 +86,9 @@ class SucktorialCliHelper:
             help="User agent to use for the requests",
         )
         customization_group.add_argument(
-            "--env",
+            "--envfile",
             type=str,
-            help="Name of the user custom .env file (.<user>.env)",
+            help="Name of the user custom .env file (.<envfile>.env)",
         )
         customization_group.add_argument(
             "--debug",
