@@ -16,6 +16,7 @@ class Config:
         self,
         email: Optional[str] = None,
         password: Optional[str] = None,
+        employee_id: Optional[int] = None,
         user_agent: Optional[str] = None,
         envfile: Optional[str] = None,
         **kwargs,
@@ -41,6 +42,10 @@ class Config:
         # If user agent is specified, override the env
         if user_agent:
             self.env["USER_AGENT"] = user_agent
+
+        # If employee id is specified, override the env
+        if employee_id:
+            self.env["EMPLOYEE_ID"] = employee_id
 
         self.LOGIN_URL = f"{self.BASE_URL}/{self.env.get('LANG')}/users/sign_in"
     

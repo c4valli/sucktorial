@@ -176,13 +176,15 @@ class Sucktorial:
         self.logger.info("Successfully sent GraphQL query")
         return graphql_response
 
-    def get_employee_data(self) -> dict:
+    def get_employee_data(self, idx: int = -1) -> dict:
         """Get the employee data.
 
         Returns:
             dict: employee data.
         """
-        return self.graphql_query(
+
+        # TODO: use introspection to check for more fields
+        currents = self.graphql_query(
             operationName = "GetCurrent",
             query = """
                 query GetCurrent {
@@ -198,7 +200,12 @@ class Sucktorial:
                 }
             """,
             variables = {}
-        )
+        ).get("data").get("apiCore").get("currents")
+        
+        if currents:
+            return currents[idx].get("employee")
+        else:
+            return None
 
     def clock_out(self, clock_out_time: Optional[datetime] = None):
         """Clock out. If the user is not clocked in, do nothing. If no clock out time is specified,

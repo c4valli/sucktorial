@@ -18,6 +18,12 @@ class SucktorialCliHelper:
             type=str,
             help="Password to login with",
         )
+        credentials_group.add_argument(
+            "--employee-id",
+            "-i",
+            type=int,
+            help="Employee id to filter some API calls",
+        )
 
         action_group = parser.add_argument_group("Actions")
         action_group.add_argument(
