@@ -14,7 +14,7 @@ from dotenv import dotenv_values
 
 class Sucktorial:
     # Hidden folder where sessions files are stored
-    SESSIONS_PATH: str = os.path.join(os.path.dirname(__file__), ".sessions")
+    SESSIONS_PATH: str = os.path.join(os.getcwd(), ".sessions")
     # Default user agent
     DEFAULT_USER_AGENT: str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
