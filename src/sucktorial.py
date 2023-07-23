@@ -9,8 +9,7 @@ from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
-from dotenv import dotenv_values
-
+from config import Config
 
 class Sucktorial:
     # Hidden folder where sessions files are stored
@@ -20,12 +19,7 @@ class Sucktorial:
 
     def __init__(
         self,
-        email: Optional[str] = None,
-        password: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        env: Optional[str] = None,
-        debug: bool = False,
-        **kwargs,
+        config: Config
     ):
         """Factorial client.
 
@@ -41,36 +35,20 @@ class Sucktorial:
                 here or in the .env file
         """
 
-        # Check if both email and password are provided (CLI usage)
-        if (email and not password) or (password and not email):
-            raise ValueError("Specify both email and password")
-
-        # Load config from .env file
-        self.config = dotenv_values()
-
-        # If a custom .env file is specified, load it
-        if env or kwargs.get("env"):
-            self.config.update(dotenv_values(f".{env or kwargs.get('env')}.env"))
-
-        # If email and password are specified, override the config
-        if email and password:
-            self.config["EMAIL"] = email
-            self.config["PASSWORD"] = password
-        # Check if email and password are correctly specified in the .env file
-        elif not self.config.get("EMAIL") or not self.config.get("PASSWORD"):
-            raise ValueError("Both email and password are required, fix your .env file")
+        # Store configuration
+        self.config = config
 
         # Setup internal stuffs
         logging.basicConfig(
             # Set the logging level to DEBUG if --debug is specified in the CLI
-            level=logging.DEBUG if debug or kwargs.get("debug") else logging.INFO,
+            level=logging.DEBUG if self.config.get("DEBUG") else logging.INFO,
             format="%(asctime)s | %(name)s | %(levelname)s - %(message)s",
         )
         # Create a logger for the current class with the name "sucktorial"
         self.logger = logging.getLogger("sucktorial")
 
-        # Debug-print the config
-        self.logger.debug(pformat({**self.config, "PASSWORD": "********"}))
+        # Debug-print the env
+        self.logger.debug(pformat({**self.config.env, "PASSWORD": "********"}))
 
         # Create a session for the requests
         self.session = requests.Session()
@@ -79,9 +57,7 @@ class Sucktorial:
         # Set the user agent
         self.session.headers.update(
             {
-                "User-Agent": user_agent
-                or kwargs.get("user_agent")
-                or self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)
+                "User-Agent": self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)
             }
         )
 
@@ -114,7 +90,7 @@ class Sucktorial:
         self.logger.debug(pformat({**payload, "user[password]": "********"}))
 
         response = self.session.post(
-            url=self.config.get("LOGIN_URL"),
+            url=self.config.LOGIN_URL,
             data=payload,
             hooks=self.__hook_factory("Failed to login", {200, 302}),
         )
@@ -130,7 +106,7 @@ class Sucktorial:
             delete_session (bool, optional): delete the session cookie file. Defaults to True.
         """
         response = self.session.delete(
-            url=self.config.get("SESSION_URL"),
+            url=self.config.SESSION_URL,
             hooks=self.__hook_factory("Failed to logout", {204}),
         )
         if delete_session:
@@ -161,11 +137,26 @@ class Sucktorial:
             "source": "desktop",
         }
         response = self.session.post(
-            url=self.config.get("CLOCK_IN_URL"),
+            url=self.config.CLOCK_IN_URL,
             data=payload,
             hooks=self.__hook_factory("Failed to clock in", {200, 201}),
         )
         self.logger.info(f"Successfully clocked in at {clock_in_time.isoformat()}")
+
+    def get_employee_data(self) -> dict:
+        """Get the employee data.
+
+        Returns:
+            dict: employee data.
+        """
+        response = self.session.get(
+            url=self.config.GRAPHQL_URL,
+            hooks=self.__hook_factory("Failed to get employee data", {200}),
+        )
+
+        employee_data = response.json()
+        self.logger.info("Successfully retrieved employee data")
+        return employee_data
 
     def clock_out(self, clock_out_time: Optional[datetime] = None):
         """Clock out. If the user is not clocked in, do nothing. If no clock out time is specified,
@@ -186,7 +177,7 @@ class Sucktorial:
             "source": "desktop",
         }
         response = self.session.post(
-            url=self.config.get("CLOCK_OUT_URL"),
+            url=self.config.CLOCK_OUT_URL,
             data=payload,
             hooks=self.__hook_factory("Failed to clock out", {200, 201}),
         )
@@ -207,7 +198,7 @@ class Sucktorial:
             dict: the current open shift (if any) or an empty dict.
         """
         response = self.session.get(
-            url=self.config.get("OPEN_SHIFT_URL"),
+            url=self.config.OPEN_SHIFT_URL,
             hooks=self.__hook_factory("Failed to get open shift", {200}),
         )
         self.logger.info("Successfully retrieved open shift")
@@ -251,7 +242,7 @@ class Sucktorial:
             params["month"] = month
 
         response = self.session.get(
-            url=self.config.get("SHIFTS_URL"),
+            url=self.config.SHIFTS_URL,
             params=params,
             hooks=self.__hook_factory("Failed to get shifts", {200}),
         )
@@ -263,7 +254,7 @@ class Sucktorial:
     def update_shift(self, shift_id: int, **kwargs):
         # clock_in, clock_out, period_id
         response = self.session.patch(
-            url=self.config.get("SHIFTS_URL") + f"/{shift_id}",
+            url=self.config.SHIFTS_URL + f"/{shift_id}",
             data=kwargs,
             hooks=self.__hook_factory("Failed to update shift", {200}),
         )
@@ -276,7 +267,7 @@ class Sucktorial:
             shift_id (int): shift ID.
         """
         response = self.session.delete(
-            url=self.config.get("SHIFTS_URL") + f"/{shift_id}",
+            url=self.config.SHIFTS_URL + f"/{shift_id}",
             hooks=self.__hook_factory("Failed to delete shift", {204}),
         )
         self.logger.info(f"Successfully deleted shift {shift_id}")
@@ -293,7 +284,7 @@ class Sucktorial:
     def get_periods(self, **kwargs):
         # (start_on, end_on), (year, month)
         response = self.session.get(
-            url=self.config.get("PERIODS_URL"),
+            url=self.config.PERIODS_URL,
             params=kwargs,
             hooks=self.__hook_factory("Failed to get periods", {200}),
         )
@@ -320,7 +311,7 @@ class Sucktorial:
             params["to"] = to_date.strftime("%Y-%m-%d")
 
         response = self.session.get(
-            url=self.config.get("LEAVES_URL"),
+            url=self.config.LEAVES_URL,
             params=params,
             hooks=self.__hook_factory("Failed to get leaves", {200}),
         )
@@ -386,7 +377,7 @@ class Sucktorial:
             str: authenticity token.
         """
         response = self.session.get(
-            url=self.config.get("LOGIN_URL"),
+            url=self.config.LOGIN_URL,
             hooks=self.__hook_factory("Failed to retrieve the login page", {200}),
         )
         html_content = BeautifulSoup(response.text, "html.parser")

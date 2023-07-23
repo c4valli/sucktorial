@@ -5,11 +5,15 @@ from random import randint
 from datetime import datetime, timedelta
 from sucktorial import Sucktorial
 from pprint import pprint
+from config import Config
 
 if __name__ == "__main__":
     args = SucktorialCliHelper.parse_and_validate()
 
-    sucktorial = Sucktorial(**vars(args))
+    # Load configuration
+    config = Config(**vars(args))
+
+    sucktorial = Sucktorial(config)
 
     if args.login:
         sucktorial.login()
