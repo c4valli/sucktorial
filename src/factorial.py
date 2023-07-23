@@ -5,7 +5,6 @@ import hashlib
 import logging
 import os
 import pickle
-import sys
 from datetime import datetime, timedelta
 from pprint import pformat, pprint
 from random import randint
@@ -45,7 +44,7 @@ class Factorial:
                 here or in the .env file
         """
 
-        # Check if both email and password are  (CLI usage)
+        # Check if both email and password are provided (CLI usage)
         if (email and not password) or (password and not email):
             raise ValueError("Specify both email and password")
 
