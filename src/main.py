@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 from clihelper import SucktorialCliHelper
 from random import randint
 from datetime import datetime, timedelta
@@ -39,3 +40,5 @@ if __name__ == "__main__":
         pprint(sucktorial.get_leaves())
     elif args.employee_data:
         pprint(sucktorial.get_employee_data())
+    elif args.graphql_query:
+        print(json.dumps(sucktorial.graphql_query(operationName="query", query = args.graphql_query)))

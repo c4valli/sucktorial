@@ -182,8 +182,6 @@ class Sucktorial:
         Returns:
             dict: employee data.
         """
-
-        # TODO: use introspection to check for more fields
         currents = self.graphql_query(
             operationName = "GetCurrent",
             query = """

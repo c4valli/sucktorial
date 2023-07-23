@@ -66,6 +66,11 @@ class SucktorialCliHelper:
             action="store_true",
             help="Retrieve employee data",
         )
+        action_group.add_argument(
+            "--graphql-query",
+            type=str,
+            help="Execute a GraphQL query",
+        )
 
         customization_group = parser.add_argument_group("Customization")
         customization_group.add_argument(
@@ -110,6 +115,7 @@ class SucktorialCliHelper:
             or args.shifts
             or args.leaves
             or args.employee_data
+            or args.graphql_query
         ):
             parser.error("Specify at least one action")
 
@@ -122,6 +128,7 @@ class SucktorialCliHelper:
             + int(args.shifts)
             + int(args.leaves)
             + int(args.employee_data)
+            + (1 if args.graphql_query else 0)
         ) > 1:
             parser.error("Specify only one action")
 
