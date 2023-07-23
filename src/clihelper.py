@@ -55,6 +55,11 @@ class SucktorialCliHelper:
             action="store_true",
             help="Get the leaves",
         )
+        action_group.add_argument(
+            "--employee-data",
+            action="store_true",
+            help="Retrieve employee data",
+        )
 
         customization_group = parser.add_argument_group("Customization")
         customization_group.add_argument(
@@ -98,6 +103,7 @@ class SucktorialCliHelper:
             or args.clocked_in
             or args.shifts
             or args.leaves
+            or args.employee_data
         ):
             parser.error("Specify at least one action")
 
@@ -109,6 +115,7 @@ class SucktorialCliHelper:
             + int(args.clocked_in)
             + int(args.shifts)
             + int(args.leaves)
+            + int(args.employee_data)
         ) > 1:
             parser.error("Specify only one action")
 

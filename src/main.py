@@ -37,3 +37,5 @@ if __name__ == "__main__":
         pprint(sucktorial.get_shifts())
     elif args.leaves:
         pprint(sucktorial.get_leaves())
+    elif args.employee_data:
+        pprint(sucktorial.get_employee_data())
