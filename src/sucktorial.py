@@ -340,7 +340,10 @@ class Sucktorial:
         return periods
 
     def get_leaves(
-        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
+        self,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+        employee_id: Optional[int] = None,
     ) -> list[dict]:
         """Get the leaves for the specified period. If no period is specified, get the all the leaves. (?)
 
@@ -351,7 +354,7 @@ class Sucktorial:
         Returns:
             list[dict]: list of leaves.
         """
-        params = {"employee_id": self.config.get("EMPLOYEE_ID")}
+        params = {"employee_id": employee_id}
         if from_date:
             params["from"] = from_date.strftime("%Y-%m-%d")
         if to_date:
@@ -374,7 +377,12 @@ class Sucktorial:
             bool: True if the user is on leave, False otherwise.
         """
         today = datetime.now()
-        return len(self.get_leaves(from_date=today, to_date=today)) > 0
+        employee_id = self.config.get("EMPLOYEE_ID")
+        if not employee_id:
+            employee_id = self.get_employee_data().get("id")
+        if not employee_id:
+            raise ValueError("Employee ID required to check if the user is on leave")
+        return len(self.get_leaves(from_date=today, to_date=today, employee_id=employee_id)) > 0
 
     def __save_session(self):
         """Save the session cookie file."""
