@@ -143,20 +143,62 @@ class Sucktorial:
         )
         self.logger.info(f"Successfully clocked in at {clock_in_time.isoformat()}")
 
+
+    def graphql_query(
+        self,
+        operationName: Optional[str],
+        query: str,
+        variables: Optional[dict] = None
+    ) -> dict:
+        """Send a GraphQL query.
+
+        Args:
+            operationName (Optional[str]): GraphQL operation name.
+            query (str): GraphQL query.
+            variables (dict, optional): GraphQL variables. Defaults to None.
+
+        Returns:
+            dict: GraphQL response.
+        """
+        payload = {
+            "operationName": operationName,
+            "query": query,
+            "variables": variables,
+        }
+
+        response = self.session.post(
+            url=self.config.GRAPHQL_URL,
+            json=payload,
+            hooks=self.__hook_factory(f"Failed to send GraphQL query ({operationName})", {200}),
+        )
+
+        graphql_response = response.json()
+        self.logger.info("Successfully sent GraphQL query")
+        return graphql_response
+
     def get_employee_data(self) -> dict:
         """Get the employee data.
 
         Returns:
             dict: employee data.
         """
-        response = self.session.get(
-            url=self.config.GRAPHQL_URL,
-            hooks=self.__hook_factory("Failed to get employee data", {200}),
+        return self.graphql_query(
+            operationName = "GetCurrent",
+            query = """
+                query GetCurrent {
+                    apiCore {
+                        currents {
+                            employee {
+                                id
+                                __typename
+                            }   
+                        }
+                        __typename
+                    }
+                }
+            """,
+            variables = {}
         )
-
-        employee_data = response.json()
-        self.logger.info("Successfully retrieved employee data")
-        return employee_data
 
     def clock_out(self, clock_out_time: Optional[datetime] = None):
         """Clock out. If the user is not clocked in, do nothing. If no clock out time is specified,
