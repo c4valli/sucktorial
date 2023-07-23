@@ -4,5 +4,10 @@
 # Sessions
 .sessions/
 
-# Environment
+# Virtual environment
 venv/
+
+# Bytecode
+*.pyc
+*.pyo
+*.pyd

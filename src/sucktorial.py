@@ -1,35 +1,25 @@
-#!/usr/bin/env python3
-
 import contextlib
 import hashlib
 import logging
 import os
 import pickle
-import sys
-from datetime import datetime, timedelta
-from pprint import pformat, pprint
-from random import randint
+from datetime import datetime
+from pprint import pformat
 from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
-from dotenv import dotenv_values
+from config import Config
 
-
-class Factorial:
+class Sucktorial:
     # Hidden folder where sessions files are stored
-    SESSIONS_PATH: str = os.path.join(os.path.dirname(__file__), ".sessions")
+    SESSIONS_PATH: str = os.path.join(os.getcwd(), ".sessions")
     # Default user agent
     DEFAULT_USER_AGENT: str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
     def __init__(
         self,
-        email: Optional[str] = None,
-        password: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        env: Optional[str] = None,
-        debug: bool = False,
-        **kwargs,
+        config: Config
     ):
         """Factorial client.
 
@@ -45,36 +35,20 @@ class Factorial:
                 here or in the .env file
         """
 
-        # Check if both email and password are  (CLI usage)
-        if (email and not password) or (password and not email):
-            raise ValueError("Specify both email and password")
-
-        # Load config from .env file
-        self.config = dotenv_values()
-
-        # If a custom .env file is specified, load it
-        if env or kwargs.get("env"):
-            self.config.update(dotenv_values(f".{env or kwargs.get('env')}.env"))
-
-        # If email and password are specified, override the config
-        if email and password:
-            self.config["EMAIL"] = email
-            self.config["PASSWORD"] = password
-        # Check if email and password are correctly specified in the .env file
-        elif not self.config.get("EMAIL") or not self.config.get("PASSWORD"):
-            raise ValueError("Both email and password are required, fix your .env file")
+        # Store configuration
+        self.config = config
 
         # Setup internal stuffs
         logging.basicConfig(
             # Set the logging level to DEBUG if --debug is specified in the CLI
-            level=logging.DEBUG if debug or kwargs.get("debug") else logging.INFO,
+            level=logging.DEBUG if self.config.get("DEBUG") else logging.INFO,
             format="%(asctime)s | %(name)s | %(levelname)s - %(message)s",
         )
-        # Create a logger for the current class with the name "factorial"
-        self.logger = logging.getLogger("factorial")
+        # Create a logger for the current class with the name "sucktorial"
+        self.logger = logging.getLogger("sucktorial")
 
-        # Debug-print the config
-        self.logger.debug(pformat({**self.config, "PASSWORD": "********"}))
+        # Debug-print the env
+        self.logger.debug(pformat({**self.config.env, "PASSWORD": "********"}))
 
         # Create a session for the requests
         self.session = requests.Session()
@@ -83,9 +57,7 @@ class Factorial:
         # Set the user agent
         self.session.headers.update(
             {
-                "User-Agent": user_agent
-                or kwargs.get("user_agent")
-                or self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)
+                "User-Agent": self.config.get("USER_AGENT", self.DEFAULT_USER_AGENT)
             }
         )
 
@@ -118,7 +90,7 @@ class Factorial:
         self.logger.debug(pformat({**payload, "user[password]": "********"}))
 
         response = self.session.post(
-            url=self.config.get("LOGIN_URL"),
+            url=self.config.LOGIN_URL,
             data=payload,
             hooks=self.__hook_factory("Failed to login", {200, 302}),
         )
@@ -134,7 +106,7 @@ class Factorial:
             delete_session (bool, optional): delete the session cookie file. Defaults to True.
         """
         response = self.session.delete(
-            url=self.config.get("SESSION_URL"),
+            url=self.config.SESSION_URL,
             hooks=self.__hook_factory("Failed to logout", {204}),
         )
         if delete_session:
@@ -155,21 +127,90 @@ class Factorial:
         if clock_in_time is None:
             clock_in_time = datetime.now()
 
-        # If the user is on leave, do nothing
-        if clock_in_time.date() == datetime.now().date() and self.on_leave():
-            self.logger.error("Today you're on leave, go back to sleep")
-            return
+        # Check if we can clock in today
+        if clock_in_time.date() == datetime.now().date():
+            if self.on_leave():
+                self.logger.error("Today you're on leave, go back to sleep")
+                return
+            if clock_in_time.weekday() == 5 and self.config.get("WORK_ON_SATURDAY") != "true":
+                self.logger.error("You don't work on saturday, go back to sleep")
+                return
+            if clock_in_time.weekday() == 6 and self.config.get("WORK_ON_SUNDAY") != "true":
+                self.logger.error("You don't work on sunday, go back to sleep")
+                return
 
         payload = {
             "now": clock_in_time.isoformat(),
             "source": "desktop",
         }
         response = self.session.post(
-            url=self.config.get("CLOCK_IN_URL"),
+            url=self.config.CLOCK_IN_URL,
             data=payload,
             hooks=self.__hook_factory("Failed to clock in", {200, 201}),
         )
         self.logger.info(f"Successfully clocked in at {clock_in_time.isoformat()}")
+
+
+    def graphql_query(
+        self,
+        operationName: Optional[str],
+        query: str,
+        variables: Optional[dict] = None
+    ) -> dict:
+        """Send a GraphQL query.
+
+        Args:
+            operationName (Optional[str]): GraphQL operation name.
+            query (str): GraphQL query.
+            variables (dict, optional): GraphQL variables. Defaults to None.
+
+        Returns:
+            dict: GraphQL response.
+        """
+        payload = {
+            "operationName": operationName,
+            "query": query,
+            "variables": variables,
+        }
+
+        response = self.session.post(
+            url=self.config.GRAPHQL_URL,
+            json=payload,
+            hooks=self.__hook_factory(f"Failed to send GraphQL query ({operationName})", {200}),
+        )
+
+        graphql_response = response.json()
+        self.logger.info("Successfully sent GraphQL query")
+        return graphql_response
+
+    def get_employee_data(self, idx: int = -1) -> dict:
+        """Get the employee data.
+
+        Returns:
+            dict: employee data.
+        """
+        currents = self.graphql_query(
+            operationName = "GetCurrent",
+            query = """
+                query GetCurrent {
+                    apiCore {
+                        currents {
+                            employee {
+                                id
+                                __typename
+                            }   
+                        }
+                        __typename
+                    }
+                }
+            """,
+            variables = {}
+        ).get("data").get("apiCore").get("currents")
+        
+        if currents:
+            return currents[idx].get("employee")
+        else:
+            return None
 
     def clock_out(self, clock_out_time: Optional[datetime] = None):
         """Clock out. If the user is not clocked in, do nothing. If no clock out time is specified,
@@ -190,7 +231,7 @@ class Factorial:
             "source": "desktop",
         }
         response = self.session.post(
-            url=self.config.get("CLOCK_OUT_URL"),
+            url=self.config.CLOCK_OUT_URL,
             data=payload,
             hooks=self.__hook_factory("Failed to clock out", {200, 201}),
         )
@@ -211,7 +252,7 @@ class Factorial:
             dict: the current open shift (if any) or an empty dict.
         """
         response = self.session.get(
-            url=self.config.get("OPEN_SHIFT_URL"),
+            url=self.config.OPEN_SHIFT_URL,
             hooks=self.__hook_factory("Failed to get open shift", {200}),
         )
         self.logger.info("Successfully retrieved open shift")
@@ -255,7 +296,7 @@ class Factorial:
             params["month"] = month
 
         response = self.session.get(
-            url=self.config.get("SHIFTS_URL"),
+            url=self.config.SHIFTS_URL,
             params=params,
             hooks=self.__hook_factory("Failed to get shifts", {200}),
         )
@@ -267,7 +308,7 @@ class Factorial:
     def update_shift(self, shift_id: int, **kwargs):
         # clock_in, clock_out, period_id
         response = self.session.patch(
-            url=self.config.get("SHIFTS_URL") + f"/{shift_id}",
+            url=self.config.SHIFTS_URL + f"/{shift_id}",
             data=kwargs,
             hooks=self.__hook_factory("Failed to update shift", {200}),
         )
@@ -280,7 +321,7 @@ class Factorial:
             shift_id (int): shift ID.
         """
         response = self.session.delete(
-            url=self.config.get("SHIFTS_URL") + f"/{shift_id}",
+            url=self.config.SHIFTS_URL + f"/{shift_id}",
             hooks=self.__hook_factory("Failed to delete shift", {204}),
         )
         self.logger.info(f"Successfully deleted shift {shift_id}")
@@ -297,7 +338,7 @@ class Factorial:
     def get_periods(self, **kwargs):
         # (start_on, end_on), (year, month)
         response = self.session.get(
-            url=self.config.get("PERIODS_URL"),
+            url=self.config.PERIODS_URL,
             params=kwargs,
             hooks=self.__hook_factory("Failed to get periods", {200}),
         )
@@ -306,7 +347,10 @@ class Factorial:
         return periods
 
     def get_leaves(
-        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
+        self,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+        employee_id: Optional[int] = None,
     ) -> list[dict]:
         """Get the leaves for the specified period. If no period is specified, get the all the leaves. (?)
 
@@ -317,14 +361,14 @@ class Factorial:
         Returns:
             list[dict]: list of leaves.
         """
-        params = {"employee_id": self.config.get("EMPLOYEE_ID")}
+        params = {"employee_id": employee_id}
         if from_date:
             params["from"] = from_date.strftime("%Y-%m-%d")
         if to_date:
             params["to"] = to_date.strftime("%Y-%m-%d")
 
         response = self.session.get(
-            url=self.config.get("LEAVES_URL"),
+            url=self.config.LEAVES_URL,
             params=params,
             hooks=self.__hook_factory("Failed to get leaves", {200}),
         )
@@ -340,7 +384,12 @@ class Factorial:
             bool: True if the user is on leave, False otherwise.
         """
         today = datetime.now()
-        return len(self.get_leaves(from_date=today, to_date=today)) > 0
+        employee_id = self.config.get("EMPLOYEE_ID")
+        if not employee_id:
+            employee_id = self.get_employee_data().get("id")
+        if not employee_id:
+            raise ValueError("Employee ID required to check if the user is on leave")
+        return len(self.get_leaves(from_date=today, to_date=today, employee_id=employee_id)) > 0
 
     def __save_session(self):
         """Save the session cookie file."""
@@ -390,7 +439,7 @@ class Factorial:
             str: authenticity token.
         """
         response = self.session.get(
-            url=self.config.get("LOGIN_URL"),
+            url=self.config.LOGIN_URL,
             hooks=self.__hook_factory("Failed to retrieve the login page", {200}),
         )
         html_content = BeautifulSoup(response.text, "html.parser")
@@ -435,151 +484,3 @@ class Factorial:
             return response
 
         return {"response": [__after_request]}
-
-    @staticmethod
-    def get_args_parser():
-        from argparse import ArgumentParser
-
-        parser = ArgumentParser(description="Sucktorial CLI")
-
-        credentials_group = parser.add_argument_group("Credentials")
-        credentials_group.add_argument(
-            "--email",
-            "-e",
-            type=str,
-            help="Email to login with",
-        )
-        credentials_group.add_argument(
-            "--password",
-            "-p",
-            type=str,
-            help="Password to login with",
-        )
-
-        action_group = parser.add_argument_group("Actions")
-        action_group.add_argument(
-            "--login",
-            action="store_true",
-            help="Login to Factorial",
-        )
-        action_group.add_argument(
-            "--logout",
-            action="store_true",
-            help="Logout from Factorial",
-        )
-        action_group.add_argument(
-            "--clock-in",
-            action="store_true",
-            help="Clock in",
-        )
-        action_group.add_argument(
-            "--clock-out",
-            action="store_true",
-            help="Clock out",
-        )
-        action_group.add_argument(
-            "--clocked-in",
-            action="store_true",
-            help="Check if you are clocked in",
-        )
-        action_group.add_argument(
-            "--shifts",
-            action="store_true",
-            help="Get the shifts",
-        )
-        action_group.add_argument(
-            "--leaves",
-            action="store_true",
-            help="Get the leaves",
-        )
-
-        customization_group = parser.add_argument_group("Customization")
-        customization_group.add_argument(
-            "--random-clock",
-            type=int,
-            nargs="?",
-            const=15,
-            help="Clock in/out at a random time (+/- X minutes from now)",
-        )
-        customization_group.add_argument(
-            "--user-agent",
-            type=str,
-            help="User agent to use for the requests",
-        )
-        customization_group.add_argument(
-            "--env",
-            type=str,
-            help="Name of the user custom .env file (.<user>.env)",
-        )
-        customization_group.add_argument(
-            "--debug",
-            action="store_true",
-            help="Enable debug logging",
-        )
-
-        return parser
-
-    @staticmethod
-    def validate_args(args, parser):
-        if (args.email and not args.password) or (args.password and not args.email):
-            parser.error("Specify both email and password")
-
-        if args.random_clock and not (args.clock_in or args.clock_out):
-            parser.error("Specify --clock-in or --clock-out with --random-clock")
-
-        if not (
-            args.login
-            or args.logout
-            or args.clock_in
-            or args.clock_out
-            or args.clocked_in
-            or args.shifts
-            or args.leaves
-        ):
-            parser.error("Specify at least one action")
-
-        if (
-            int(args.login)
-            + int(args.logout)
-            + int(args.clock_in)
-            + int(args.clock_out)
-            + int(args.clocked_in)
-            + int(args.shifts)
-            + int(args.leaves)
-        ) > 1:
-            parser.error("Specify only one action")
-
-    @staticmethod
-    def run_from_cli():
-        parser = Factorial.get_args_parser()
-        args, _ = parser.parse_known_args()
-        Factorial.validate_args(args, parser)
-
-        factorial = Factorial(**vars(args))
-
-        if args.login:
-            factorial.login()
-        elif args.logout:
-            factorial.logout()
-        elif args.clock_in:
-            factorial.clock_in(
-                datetime.now() + timedelta(minutes=randint(-args.random_clock, args.random_clock))
-                if args.random_clock is not None
-                else None
-            )
-        elif args.clock_out:
-            factorial.clock_out(
-                datetime.now() + timedelta(minutes=randint(-args.random_clock, args.random_clock))
-                if args.random_clock is not None
-                else None
-            )
-        elif args.clocked_in:
-            print(factorial.is_clocked_in())
-        elif args.shifts:
-            pprint(factorial.get_shifts())
-        elif args.leaves:
-            pprint(factorial.get_leaves())
-
-
-if __name__ == "__main__":
-    Factorial.run_from_cli()
