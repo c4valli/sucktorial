@@ -127,10 +127,17 @@ class Sucktorial:
         if clock_in_time is None:
             clock_in_time = datetime.now()
 
-        # If the user is on leave, do nothing
-        if clock_in_time.date() == datetime.now().date() and self.on_leave():
-            self.logger.error("Today you're on leave, go back to sleep")
-            return
+        # Check if we can clock in today
+        if clock_in_time.date() == datetime.now().date():
+            if self.on_leave():
+                self.logger.error("Today you're on leave, go back to sleep")
+                return
+            if clock_in_time.weekday() == 5 and self.config.get("WORK_ON_SATURDAY") != "true":
+                self.logger.error("You don't work on saturday, go back to sleep")
+                return
+            if clock_in_time.weekday() == 6 and self.config.get("WORK_ON_SUNDAY") != "true":
+                self.logger.error("You don't work on sunday, go back to sleep")
+                return
 
         payload = {
             "now": clock_in_time.isoformat(),
