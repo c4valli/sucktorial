@@ -1,13 +1,10 @@
-#!/usr/bin/env python3
-
 import contextlib
 import hashlib
 import logging
 import os
 import pickle
-from datetime import datetime, timedelta
-from pprint import pformat, pprint
-from random import randint
+from datetime import datetime
+from pprint import pformat
 from typing import Optional
 
 import requests
@@ -15,7 +12,7 @@ from bs4 import BeautifulSoup
 from dotenv import dotenv_values
 
 
-class Factorial:
+class Sucktorial:
     # Hidden folder where sessions files are stored
     SESSIONS_PATH: str = os.path.join(os.path.dirname(__file__), ".sessions")
     # Default user agent
@@ -69,8 +66,8 @@ class Factorial:
             level=logging.DEBUG if debug or kwargs.get("debug") else logging.INFO,
             format="%(asctime)s | %(name)s | %(levelname)s - %(message)s",
         )
-        # Create a logger for the current class with the name "factorial"
-        self.logger = logging.getLogger("factorial")
+        # Create a logger for the current class with the name "sucktorial"
+        self.logger = logging.getLogger("sucktorial")
 
         # Debug-print the config
         self.logger.debug(pformat({**self.config, "PASSWORD": "********"}))
@@ -434,151 +431,3 @@ class Factorial:
             return response
 
         return {"response": [__after_request]}
-
-    @staticmethod
-    def get_args_parser():
-        from argparse import ArgumentParser
-
-        parser = ArgumentParser(description="Sucktorial CLI")
-
-        credentials_group = parser.add_argument_group("Credentials")
-        credentials_group.add_argument(
-            "--email",
-            "-e",
-            type=str,
-            help="Email to login with",
-        )
-        credentials_group.add_argument(
-            "--password",
-            "-p",
-            type=str,
-            help="Password to login with",
-        )
-
-        action_group = parser.add_argument_group("Actions")
-        action_group.add_argument(
-            "--login",
-            action="store_true",
-            help="Login to Factorial",
-        )
-        action_group.add_argument(
-            "--logout",
-            action="store_true",
-            help="Logout from Factorial",
-        )
-        action_group.add_argument(
-            "--clock-in",
-            action="store_true",
-            help="Clock in",
-        )
-        action_group.add_argument(
-            "--clock-out",
-            action="store_true",
-            help="Clock out",
-        )
-        action_group.add_argument(
-            "--clocked-in",
-            action="store_true",
-            help="Check if you are clocked in",
-        )
-        action_group.add_argument(
-            "--shifts",
-            action="store_true",
-            help="Get the shifts",
-        )
-        action_group.add_argument(
-            "--leaves",
-            action="store_true",
-            help="Get the leaves",
-        )
-
-        customization_group = parser.add_argument_group("Customization")
-        customization_group.add_argument(
-            "--random-clock",
-            type=int,
-            nargs="?",
-            const=15,
-            help="Clock in/out at a random time (+/- X minutes from now)",
-        )
-        customization_group.add_argument(
-            "--user-agent",
-            type=str,
-            help="User agent to use for the requests",
-        )
-        customization_group.add_argument(
-            "--env",
-            type=str,
-            help="Name of the user custom .env file (.<user>.env)",
-        )
-        customization_group.add_argument(
-            "--debug",
-            action="store_true",
-            help="Enable debug logging",
-        )
-
-        return parser
-
-    @staticmethod
-    def validate_args(args, parser):
-        if (args.email and not args.password) or (args.password and not args.email):
-            parser.error("Specify both email and password")
-
-        if args.random_clock and not (args.clock_in or args.clock_out):
-            parser.error("Specify --clock-in or --clock-out with --random-clock")
-
-        if not (
-            args.login
-            or args.logout
-            or args.clock_in
-            or args.clock_out
-            or args.clocked_in
-            or args.shifts
-            or args.leaves
-        ):
-            parser.error("Specify at least one action")
-
-        if (
-            int(args.login)
-            + int(args.logout)
-            + int(args.clock_in)
-            + int(args.clock_out)
-            + int(args.clocked_in)
-            + int(args.shifts)
-            + int(args.leaves)
-        ) > 1:
-            parser.error("Specify only one action")
-
-    @staticmethod
-    def run_from_cli():
-        parser = Factorial.get_args_parser()
-        args, _ = parser.parse_known_args()
-        Factorial.validate_args(args, parser)
-
-        factorial = Factorial(**vars(args))
-
-        if args.login:
-            factorial.login()
-        elif args.logout:
-            factorial.logout()
-        elif args.clock_in:
-            factorial.clock_in(
-                datetime.now() + timedelta(minutes=randint(-args.random_clock, args.random_clock))
-                if args.random_clock is not None
-                else None
-            )
-        elif args.clock_out:
-            factorial.clock_out(
-                datetime.now() + timedelta(minutes=randint(-args.random_clock, args.random_clock))
-                if args.random_clock is not None
-                else None
-            )
-        elif args.clocked_in:
-            print(factorial.is_clocked_in())
-        elif args.shifts:
-            pprint(factorial.get_shifts())
-        elif args.leaves:
-            pprint(factorial.get_leaves())
-
-
-if __name__ == "__main__":
-    Factorial.run_from_cli()
