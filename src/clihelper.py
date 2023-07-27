@@ -120,8 +120,7 @@ class SucktorialCliHelper:
             parser.error("Specify at least one action")
 
         if (
-            int(args.login)
-            + int(args.logout)
+            int(args.logout)
             + int(args.clock_in)
             + int(args.clock_out)
             + int(args.clocked_in)

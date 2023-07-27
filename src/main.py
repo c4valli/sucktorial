@@ -18,7 +18,8 @@ if __name__ == "__main__":
 
     if args.login:
         sucktorial.login()
-    elif args.logout:
+    
+    if args.logout:
         sucktorial.logout()
     elif args.clock_in:
         sucktorial.clock_in(
